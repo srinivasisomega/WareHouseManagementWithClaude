@@ -1,0 +1,32 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "dotnet run --project \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.csproj\" -v q --nologo",
+            "timeout": 120
+          },
+          {
+            "type": "command",
+            "command": "dotnet build \"$CLAUDE_PROJECT_DIR/.claude/hooks/protect-tables.csproj\" -v q --nologo > /dev/null",
+            "timeout": 120
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell|mcp__warehouse-sql__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "dotnet \"$CLAUDE_PROJECT_DIR/.claude/hooks/bin/protect-tables/Debug/net8.0/protect-tables.dll\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

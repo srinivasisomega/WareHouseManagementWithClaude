@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "warehouse-sql": {
+      "type": "stdio",
+      "command": "dotnet",
+      "args": ["tools/WarehouseSqlMcp/bin/Release/net8.0/WarehouseSqlMcp.dll"],
+      "env": {
+        "WAREHOUSE_MCP_CONNECTION": "Server=(localdb)\\MSSQLLocalDB;Database=WarehouseInventory;Integrated Security=True;TrustServerCertificate=True"
+      }
+    }
+  }
+}

@@ -1,0 +1,1465 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>WarehouseInventory.Api</name>
+    </assembly>
+    <members>
+        <member name="T:WarehouseInventory.Api.Common.AuthCookie">
+            <summary>
+            The session JWT travels in an HttpOnly cookie so browser scripts cannot read it (XSS token theft).
+            SameSite=Strict keeps the browser from sending it on cross-site requests (CSRF).
+            </summary>
+        </member>
+        <member name="F:WarehouseInventory.Api.Common.AuthCookie.Name">
+            <summary>Cookie name holding the JWT.</summary>
+        </member>
+        <member name="M:WarehouseInventory.Api.Common.AuthCookie.Append(Microsoft.AspNetCore.Http.HttpResponse,System.String,System.DateTime)">
+            <summary>Writes the session cookie, expiring together with the token.</summary>
+        </member>
+        <member name="M:WarehouseInventory.Api.Common.AuthCookie.Delete(Microsoft.AspNetCore.Http.HttpResponse)">
+            <summary>Removes the session cookie.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Common.ClaimsPrincipalExtensions">
+            <summary>Helpers for reading the authenticated caller from the JWT claims.</summary>
+        </member>
+        <member name="M:WarehouseInventory.Api.Common.ClaimsPrincipalExtensions.GetUsername(System.Security.Claims.ClaimsPrincipal)">
+            <summary>Username of the authenticated caller, recorded on audit fields.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Common.NotFoundException">
+            <summary>Thrown when a requested resource does not exist. Mapped to HTTP 404.</summary>
+        </member>
+        <member name="M:WarehouseInventory.Api.Common.NotFoundException.#ctor(System.String)">
+            <summary>Creates the exception.</summary>
+            <param name="message">Client-safe message returned as the problem detail.</param>
+        </member>
+        <member name="T:WarehouseInventory.Api.Common.ConflictException">
+            <summary>Thrown when a request conflicts with existing state (e.g. a duplicate SKU). Mapped to HTTP 409.</summary>
+        </member>
+        <member name="M:WarehouseInventory.Api.Common.ConflictException.#ctor(System.String)">
+            <summary>Creates the exception.</summary>
+            <param name="message">Client-safe message returned as the problem detail.</param>
+        </member>
+        <member name="T:WarehouseInventory.Api.Common.BusinessRuleException">
+            <summary>Thrown when a request is well-formed but violates a business rule. Mapped to HTTP 422.</summary>
+        </member>
+        <member name="M:WarehouseInventory.Api.Common.BusinessRuleException.#ctor(System.String)">
+            <summary>Creates the exception.</summary>
+            <param name="message">Client-safe message returned as the problem detail.</param>
+        </member>
+        <member name="T:WarehouseInventory.Api.Common.GlobalExceptionHandler">
+            <summary>
+            Converts exceptions into RFC 7807 problem responses. Known domain exceptions keep their message;
+            anything unexpected is logged and returned as a generic 500 without internal details.
+            </summary>
+        </member>
+        <member name="M:WarehouseInventory.Api.Common.GlobalExceptionHandler.#ctor(Microsoft.Extensions.Logging.ILogger{WarehouseInventory.Api.Common.GlobalExceptionHandler},Microsoft.AspNetCore.Http.IProblemDetailsService)">
+            <summary>Creates the handler.</summary>
+            <param name="logger">Logger for rejected and unhandled requests.</param>
+            <param name="problemDetailsService">Writes the RFC 7807 response body.</param>
+        </member>
+        <member name="M:WarehouseInventory.Api.Common.GlobalExceptionHandler.TryHandleAsync(Microsoft.AspNetCore.Http.HttpContext,System.Exception,System.Threading.CancellationToken)">
+            <summary>
+            Maps <see cref="T:WarehouseInventory.Api.Common.NotFoundException"/> to 404, <see cref="T:WarehouseInventory.Api.Common.ConflictException"/> and <see cref="T:Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException"/>
+            to 409, <see cref="T:WarehouseInventory.Api.Common.BusinessRuleException"/> to 422 and anything else to 500, then writes a problem response.
+            </summary>
+            <param name="httpContext">The failing request.</param>
+            <param name="exception">The exception thrown by the pipeline.</param>
+            <param name="cancellationToken">Cancellation token.</param>
+            <returns>True when the problem response was written.</returns>
+        </member>
+        <member name="T:WarehouseInventory.Api.Configuration.JwtOptions">
+            <summary>JWT issuing and validation settings, bound from the "Jwt" section and validated on startup.</summary>
+        </member>
+        <member name="F:WarehouseInventory.Api.Configuration.JwtOptions.SectionName">
+            <summary>Configuration section name.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Configuration.JwtOptions.Issuer">
+            <summary>Token issuer (iss) written on issue and required on validation.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Configuration.JwtOptions.Audience">
+            <summary>Token audience (aud) written on issue and required on validation.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Configuration.JwtOptions.Key">
+            <summary>HMAC signing key. Supply via user-secrets or the Jwt__Key environment variable; never commit it.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Configuration.JwtOptions.ExpiryMinutes">
+            <summary>Token lifetime in minutes (5 to 1440).</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Configuration.SeedUsersOptions">
+            <summary>Initial user accounts created when the user table is empty. Passwords come from secrets, not source.</summary>
+        </member>
+        <member name="F:WarehouseInventory.Api.Configuration.SeedUsersOptions.SectionName">
+            <summary>Configuration section name.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Configuration.SeedUsersOptions.AdminUsername">
+            <summary>Username of the seeded admin account.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Configuration.SeedUsersOptions.AdminPassword">
+            <summary>Password of the seeded admin account; seeding is skipped if either password is missing.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Configuration.SeedUsersOptions.StaffUsername">
+            <summary>Username of the seeded staff account.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Configuration.SeedUsersOptions.StaffPassword">
+            <summary>Password of the seeded staff account; seeding is skipped if either password is missing.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Configuration.DatabaseOptions">
+            <summary>Database startup behaviour, bound from the "Database" section.</summary>
+        </member>
+        <member name="F:WarehouseInventory.Api.Configuration.DatabaseOptions.SectionName">
+            <summary>Configuration section name.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Configuration.DatabaseOptions.ApplyMigrationsOnStartup">
+            <summary>When true, pending EF Core migrations are applied at application start.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Configuration.AuthPolicies">
+            <summary>Names of the authorization policies used by the controllers.</summary>
+        </member>
+        <member name="F:WarehouseInventory.Api.Configuration.AuthPolicies.AdminOnly">
+            <summary>Master-data maintenance: items, locations, thresholds.</summary>
+        </member>
+        <member name="F:WarehouseInventory.Api.Configuration.AuthPolicies.WarehouseOperations">
+            <summary>Day-to-day warehouse operations. Admins are included so they can assist on the floor.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Controllers.AuthController">
+            <summary>Signs warehouse users in and out using an HttpOnly session cookie that carries the JWT.</summary>
+        </member>
+        <member name="F:WarehouseInventory.Api.Controllers.AuthController.LoginRateLimitPolicy">
+            <summary>Name of the per-IP rate-limit policy applied to the login endpoint.</summary>
+        </member>
+        <member name="M:WarehouseInventory.Api.Controllers.AuthController.#ctor(WarehouseInventory.Api.Services.IAuthService)">
+            <summary>Creates the controller.</summary>
+            <param name="authService">Service that verifies credentials and issues tokens.</param>
+        </member>
+        <member name="M:WarehouseInventory.Api.Controllers.AuthController.Login(WarehouseInventory.Api.Dtos.LoginRequest,System.Threading.CancellationToken)">
+            <summary>POST api/auth/login — verifies credentials and sets the HttpOnly session cookie. Anonymous and rate limited per client IP.</summary>
+            <param name="request">The user's credentials.</param>
+            <param name="ct">Request cancellation token.</param>
+            <returns>The user's name, role and session expiry (the token itself is only in the cookie).</returns>
+            <response code="200">Credentials are valid; the session cookie is set.</response>
+            <response code="400">The request failed validation (missing or over-long username/password).</response>
+            <response code="401">The username or password is wrong, or the account is inactive.</response>
+            <response code="429">Too many login attempts from this client; retry after the rate-limit window.</response>
+        </member>
+        <member name="M:WarehouseInventory.Api.Controllers.AuthController.Me">
+            <summary>GET api/auth/me — returns the current session so the UI can restore it after a page reload.</summary>
+            <returns>The signed-in user's name, role and session expiry.</returns>
+            <response code="200">The caller has a valid session.</response>
+            <response code="401">No valid session.</response>
+        </member>
+        <member name="M:WarehouseInventory.Api.Controllers.AuthController.Logout">
+            <summary>POST api/auth/logout — clears the session cookie.</summary>
+            <response code="204">The session cookie was cleared.</response>
+        </member>
+        <member name="T:WarehouseInventory.Api.Controllers.InventoryController">
+            <summary>Read-only views of on-hand stock and low-stock alerts. Available to staff and admins.</summary>
+        </member>
+        <member name="M:WarehouseInventory.Api.Controllers.InventoryController.#ctor(WarehouseInventory.Api.Services.IInventoryService)">
+            <summary>Creates the controller.</summary>
+            <param name="inventoryService">Service that queries on-hand stock.</param>
+        </member>
+        <member name="M:WarehouseInventory.Api.Controllers.InventoryController.Search(System.String,System.Nullable{System.Int32},System.Boolean,System.Threading.CancellationToken)">
+            <summary>GET api/inventory — searches active items with their total and per-location on-hand quantities.</summary>
+            <param name="search">Optional text matched against SKU or name.</param>
+            <param name="locationId">Optional location; only items with stock at that location are returned.</param>
+            <param name="lowStockOnly">When true, only items at or below their low-stock threshold are returned.</param>
+            <param name="ct">Request cancellation token.</param>
+            <returns>Matching items ordered by SKU, capped at <see cref="F:WarehouseInventory.Api.Services.InventoryService.MaxResults"/>.</returns>
+            <response code="200">The matching inventory rows (possibly empty).</response>
+            <response code="401">The caller is not authenticated.</response>
+        </member>
+        <member name="M:WarehouseInventory.Api.Controllers.InventoryController.GetAlerts(System.Threading.CancellationToken)">
+            <summary>GET api/inventory/alerts — lists active items whose total stock is at or below their threshold.</summary>
+            <param name="ct">Request cancellation token.</param>
+            <returns>Alerts ordered by largest shortfall first.</returns>
+            <response code="200">The current low-stock alerts (possibly empty).</response>
+            <response code="401">The caller is not authenticated.</response>
+        </member>
+        <member name="T:WarehouseInventory.Api.Controllers.ItemsController">
+            <summary>Item (SKU) master data. Reads are open to staff and admins; changes are admin-only.</summary>
+        </member>
+        <member name="M:WarehouseInventory.Api.Controllers.ItemsController.#ctor(WarehouseInventory.Api.Services.IItemService)">
+            <summary>Creates the controller.</summary>
+            <param name="itemService">Service that manages item master data.</param>
+        </member>
+        <member name="M:WarehouseInventory.Api.Controllers.ItemsController.GetItems(System.String,System.Boolean,System.Threading.CancellationToken)">
+            <summary>GET api/items — lists items ordered by SKU.</summary>
+            <param name="search">Optional text matched against SKU or name.</param>
+            <param name="includeInactive">When true, inactive items are included.</param>
+            <param name="ct">Request cancellation token.</param>
+            <returns>The matching items.</returns>
+            <response code="200">The matching items (possibly empty).</response>
+            <response code="401">The caller is not authenticated.</response>
+        </member>
+        <member name="M:WarehouseInventory.Api.Controllers.ItemsController.GetItem(System.Int32,System.Threading.CancellationToken)">
+            <summary>GET api/items/{id} — returns a single item.</summary>
+            <param name="id">Item id.</param>
+            <param name="ct">Request cancellation token.</param>
+            <returns>The item.</returns>
+            <response code="200">The item was found.</response>
+            <response code="401">The caller is not authenticated.</response>
+            <response code="404">No item has this id.</response>
+        </member>
+        <member name="M:WarehouseInventory.Api.Controllers.ItemsController.CreateItem(WarehouseInventory.Api.Dtos.ItemRequest,System.Threading.CancellationToken)">
+            <summary>POST api/items — creates an item. Admin only. The SKU is trimmed and upper-cased.</summary>
+            <param name="request">The item to create.</param>
+            <param name="ct">Request cancellation token.</param>
+            <returns>The created item, with a Location header pointing at <see cref="M:WarehouseInventory.Api.Controllers.ItemsController.GetItem(System.Int32,System.Threading.CancellationToken)"/>.</returns>
+            <response code="201">The item was created.</response>
+            <response code="400">The request failed validation.</response>
+            <response code="401">The caller is not authenticated.</response>
+            <response code="403">The caller is not an admin.</response>
+            <response code="409">Another item already uses this SKU.</response>
+        </member>
+        <member name="M:WarehouseInventory.Api.Controllers.ItemsController.UpdateItem(System.Int32,WarehouseInventory.Api.Dtos.ItemRequest,System.Threading.CancellationToken)">
+            <summary>PUT api/items/{id} — replaces an item's details, including SKU, threshold and active flag. Admin only.</summary>
+            <param name="id">Item id.</param>
+            <param name="request">The new item details.</param>
+            <param name="ct">Request cancellation token.</param>
+            <returns>The updated item.</returns>
+            <response code="200">The item was updated.</response>
+            <response code="400">The request failed validation.</response>
+            <response code="401">The caller is not authenticated.</response>
+            <response code="403">The caller is not an admin.</response>
+            <response code="404">No item has this id.</response>
+            <response code="409">The new SKU is already used by another item.</response>
+        </member>
+        <member name="M:WarehouseInventory.Api.Controllers.ItemsController.UpdateThreshold(System.Int32,WarehouseInventory.Api.Dtos.ThresholdRequest,System.Threading.CancellationToken)">
+            <summary>PUT api/items/{id}/threshold — changes only the item's low-stock threshold. Admin only.</summary>
+            <param name="id">Item id.</param>
+            <param name="request">The new threshold; zero disables alerts.</param>
+            <param name="ct">Request cancellation token.</param>
+            <returns>The updated item.</returns>
+            <response code="200">The threshold was updated.</response>
+            <response code="400">The request failed validation.</response>
+            <response code="401">The caller is not authenticated.</response>
+            <response code="403">The caller is not an admin.</response>
+            <response code="404">No item has this id.</response>
+        </member>
+        <member name="T:WarehouseInventory.Api.Controllers.LocationsController">
+            <summary>Storage location master data. Reads are open to staff and admins; changes are admin-only.</summary>
+        </member>
+        <member name="M:WarehouseInventory.Api.Controllers.LocationsController.#ctor(WarehouseInventory.Api.Services.ILocationService)">
+            <summary>Creates the controller.</summary>
+            <param name="locationService">Service that manages location master data.</param>
+        </member>
+        <member name="M:WarehouseInventory.Api.Controllers.LocationsController.GetLocations(System.Boolean,System.Threading.CancellationToken)">
+            <summary>GET api/locations — lists locations ordered by code.</summary>
+            <param name="includeInactive">When true, inactive locations are included.</param>
+            <param name="ct">Request cancellation token.</param>
+            <returns>The locations.</returns>
+            <response code="200">The locations (possibly empty).</response>
+            <response code="401">The caller is not authenticated.</response>
+        </member>
+        <member name="M:WarehouseInventory.Api.Controllers.LocationsController.GetLocation(System.Int32,System.Threading.CancellationToken)">
+            <summary>GET api/locations/{id} — returns a single location.</summary>
+            <param name="id">Location id.</param>
+            <param name="ct">Request cancellation token.</param>
+            <returns>The location.</returns>
+            <response code="200">The location was found.</response>
+            <response code="401">The caller is not authenticated.</response>
+            <response code="404">No location has this id.</response>
+        </member>
+        <member name="M:WarehouseInventory.Api.Controllers.LocationsController.CreateLocation(WarehouseInventory.Api.Dtos.LocationRequest,System.Threading.CancellationToken)">
+            <summary>POST api/locations — creates a location. Admin only. The code is trimmed and upper-cased.</summary>
+            <param name="request">The location to create.</param>
+            <param name="ct">Request cancellation token.</param>
+            <returns>The created location, with a Location header pointing at <see cref="M:WarehouseInventory.Api.Controllers.LocationsController.GetLocation(System.Int32,System.Threading.CancellationToken)"/>.</returns>
+            <response code="201">The location was created.</response>
+            <response code="400">The request failed validation.</response>
+            <response code="401">The caller is not authenticated.</response>
+            <response code="403">The caller is not an admin.</response>
+            <response code="409">Another location already uses this code.</response>
+        </member>
+        <member name="M:WarehouseInventory.Api.Controllers.LocationsController.UpdateLocation(System.Int32,WarehouseInventory.Api.Dtos.LocationRequest,System.Threading.CancellationToken)">
+            <summary>PUT api/locations/{id} — replaces a location's details, including its active flag. Admin only.</summary>
+            <param name="id">Location id.</param>
+            <param name="request">The new location details.</param>
+            <param name="ct">Request cancellation token.</param>
+            <returns>The updated location.</returns>
+            <response code="200">The location was updated.</response>
+            <response code="400">The request failed validation.</response>
+            <response code="401">The caller is not authenticated.</response>
+            <response code="403">The caller is not an admin.</response>
+            <response code="404">No location has this id.</response>
+            <response code="409">The new code is already used by another location.</response>
+            <response code="422">The location still holds stock and cannot be deactivated.</response>
+        </member>
+        <member name="T:WarehouseInventory.Api.Controllers.OrdersController">
+            <summary>Outbound fulfillment orders and their pick, pack and dispatch steps. Available to staff and admins.</summary>
+        </member>
+        <member name="M:WarehouseInventory.Api.Controllers.OrdersController.#ctor(WarehouseInventory.Api.Services.IOrderService)">
+            <summary>Creates the controller.</summary>
+            <param name="orderService">Service that runs the order workflow.</param>
+        </member>
+        <member name="M:WarehouseInventory.Api.Controllers.OrdersController.GetOrders(System.Nullable{WarehouseInventory.Api.Domain.OrderStatus},System.Threading.CancellationToken)">
+            <summary>GET api/orders — lists orders, newest first.</summary>
+            <param name="status">Optional status filter.</param>
+            <param name="ct">Request cancellation token.</param>
+            <returns>Order summaries.</returns>
+            <response code="200">The matching orders (possibly empty).</response>
+            <response code="400">The status value is not a valid <see cref="T:WarehouseInventory.Api.Domain.OrderStatus"/>.</response>
+            <response code="401">The caller is not authenticated.</response>
+        </member>
+        <member name="M:WarehouseInventory.Api.Controllers.OrdersController.GetOrder(System.Int32,System.Threading.CancellationToken)">
+            <summary>GET api/orders/{id} — returns an order with its lines and where each line's item is in stock.</summary>
+            <param name="id">Order id.</param>
+            <param name="ct">Request cancellation token.</param>
+            <returns>The order detail.</returns>
+            <response code="200">The order was found.</response>
+            <response code="401">The caller is not authenticated.</response>
+            <response code="404">No order has this id.</response>
+        </member>
+        <member name="M:WarehouseInventory.Api.Controllers.OrdersController.CreateOrder(WarehouseInventory.Api.Dtos.CreateOrderRequest,System.Threading.CancellationToken)">
+            <summary>POST api/orders — creates an order in the Open status, recording the caller as its creator.</summary>
+            <param name="request">Customer and order lines.</param>
+            <param name="ct">Request cancellation token.</param>
+            <returns>The created order, with a Location header pointing at <see cref="M:WarehouseInventory.Api.Controllers.OrdersController.GetOrder(System.Int32,System.Threading.CancellationToken)"/>.</returns>
+            <response code="201">The order was created.</response>
+            <response code="400">The request failed validation (e.g. no lines, invalid quantity).</response>
+            <response code="401">The caller is not authenticated.</response>
+            <response code="422">An item appears more than once, or an item does not exist or is inactive.</response>
+        </member>
+        <member name="M:WarehouseInventory.Api.Controllers.OrdersController.Pick(System.Int32,WarehouseInventory.Api.Dtos.PickRequest,System.Threading.CancellationToken)">
+            <summary>POST api/orders/{id}/pick — picks a quantity of one order line from a location, removing it from stock.</summary>
+            <param name="id">Order id.</param>
+            <param name="request">The order line, source location and quantity to pick.</param>
+            <param name="ct">Request cancellation token.</param>
+            <returns>The updated order; its status becomes Picking, or Picked once every line is complete.</returns>
+            <response code="200">The pick was recorded.</response>
+            <response code="400">The request failed validation.</response>
+            <response code="401">The caller is not authenticated.</response>
+            <response code="404">The order, or the line on this order, was not found.</response>
+            <response code="409">The stock record was changed concurrently by another user; refresh and retry.</response>
+            <response code="422">The order is past picking, the quantity exceeds what remains on the line, or the location has insufficient stock.</response>
+        </member>
+        <member name="M:WarehouseInventory.Api.Controllers.OrdersController.Pack(System.Int32,WarehouseInventory.Api.Dtos.PackRequest,System.Threading.CancellationToken)">
+            <summary>POST api/orders/{id}/pack — marks a fully picked order as packed.</summary>
+            <param name="id">Order id.</param>
+            <param name="request">Number of packages.</param>
+            <param name="ct">Request cancellation token.</param>
+            <returns>The updated order in the Packed status.</returns>
+            <response code="200">The order was packed.</response>
+            <response code="400">The request failed validation.</response>
+            <response code="401">The caller is not authenticated.</response>
+            <response code="404">No order has this id.</response>
+            <response code="422">The order is not in the Picked status.</response>
+        </member>
+        <member name="M:WarehouseInventory.Api.Controllers.OrdersController.Dispatch(System.Int32,WarehouseInventory.Api.Dtos.DispatchRequest,System.Threading.CancellationToken)">
+            <summary>POST api/orders/{id}/dispatch — records carrier details and marks a packed order as dispatched.</summary>
+            <param name="id">Order id.</param>
+            <param name="request">Carrier and optional tracking number.</param>
+            <param name="ct">Request cancellation token.</param>
+            <returns>The updated order in the Dispatched status.</returns>
+            <response code="200">The order was dispatched.</response>
+            <response code="400">The request failed validation.</response>
+            <response code="401">The caller is not authenticated.</response>
+            <response code="404">No order has this id.</response>
+            <response code="422">The order is not in the Packed status.</response>
+        </member>
+        <member name="T:WarehouseInventory.Api.Controllers.StockController">
+            <summary>Stock receipts, transfers between locations, and the movement audit trail. Available to staff and admins.</summary>
+        </member>
+        <member name="M:WarehouseInventory.Api.Controllers.StockController.#ctor(WarehouseInventory.Api.Services.IStockService)">
+            <summary>Creates the controller.</summary>
+            <param name="stockService">Service that changes on-hand stock.</param>
+        </member>
+        <member name="M:WarehouseInventory.Api.Controllers.StockController.Receive(WarehouseInventory.Api.Dtos.ReceiveStockRequest,System.Threading.CancellationToken)">
+            <summary>POST api/stock/receipts — receives incoming stock of an item into a location.</summary>
+            <param name="request">Item, location, quantity and optional supplier reference.</param>
+            <param name="ct">Request cancellation token.</param>
+            <returns>The recorded Receipt movement.</returns>
+            <response code="201">The stock was received.</response>
+            <response code="400">The request failed validation.</response>
+            <response code="401">The caller is not authenticated.</response>
+            <response code="404">The item or location was not found.</response>
+            <response code="409">The stock record was changed concurrently by another user; refresh and retry.</response>
+            <response code="422">The item or location is inactive.</response>
+        </member>
+        <member name="M:WarehouseInventory.Api.Controllers.StockController.Transfer(WarehouseInventory.Api.Dtos.TransferStockRequest,System.Threading.CancellationToken)">
+            <summary>POST api/stock/transfers — moves a quantity of an item from one location to another.</summary>
+            <param name="request">Item, source and destination locations, quantity and optional reference.</param>
+            <param name="ct">Request cancellation token.</param>
+            <returns>The recorded Transfer movement.</returns>
+            <response code="201">The stock was transferred.</response>
+            <response code="400">The request failed validation.</response>
+            <response code="401">The caller is not authenticated.</response>
+            <response code="404">The item or destination location was not found.</response>
+            <response code="409">The stock record was changed concurrently by another user; refresh and retry.</response>
+            <response code="422">Source equals destination, the item or destination is inactive, or the source has insufficient stock.</response>
+        </member>
+        <member name="M:WarehouseInventory.Api.Controllers.StockController.GetMovements(System.Nullable{System.Int32},System.Nullable{System.Int32},System.Int32,System.Threading.CancellationToken)">
+            <summary>GET api/stock/movements — lists stock movements, newest first.</summary>
+            <param name="itemId">Optional item filter.</param>
+            <param name="locationId">Optional location filter; matches movements from or to the location.</param>
+            <param name="take">Maximum rows to return, clamped to 1..<see cref="F:WarehouseInventory.Api.Services.StockService.MaxMovementsPage"/>.</param>
+            <param name="ct">Request cancellation token.</param>
+            <returns>The matching movements.</returns>
+            <response code="200">The matching movements (possibly empty).</response>
+            <response code="401">The caller is not authenticated.</response>
+        </member>
+        <member name="T:WarehouseInventory.Api.Data.DatabaseInitializer">
+            <summary>Applies pending migrations (when enabled) and creates the initial admin/staff accounts.</summary>
+        </member>
+        <member name="M:WarehouseInventory.Api.Data.DatabaseInitializer.InitializeAsync(System.IServiceProvider,System.Threading.CancellationToken)">
+            <summary>Runs startup database initialization in its own DI scope.</summary>
+            <param name="services">The application service provider.</param>
+            <param name="ct">Cancellation token.</param>
+        </member>
+        <member name="M:WarehouseInventory.Api.Data.DatabaseInitializer.SeedUsersAsync(WarehouseInventory.Api.Data.WarehouseDbContext,WarehouseInventory.Api.Configuration.SeedUsersOptions,Microsoft.AspNetCore.Identity.IPasswordHasher{WarehouseInventory.Api.Domain.AppUser},Microsoft.Extensions.Logging.ILogger,System.Threading.CancellationToken)">
+            <summary>Creates the admin and staff accounts when no users exist and both passwords are configured.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Data.Migrations.InitialCreate">
+            <inheritdoc />
+        </member>
+        <member name="M:WarehouseInventory.Api.Data.Migrations.InitialCreate.Up(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:WarehouseInventory.Api.Data.Migrations.InitialCreate.Down(Microsoft.EntityFrameworkCore.Migrations.MigrationBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="M:WarehouseInventory.Api.Data.Migrations.InitialCreate.BuildTargetModel(Microsoft.EntityFrameworkCore.ModelBuilder)">
+            <inheritdoc />
+        </member>
+        <member name="T:WarehouseInventory.Api.Data.StockLevelExtensions">
+            <summary>Shared stock-level lookups used by every operation that changes on-hand quantities.</summary>
+        </member>
+        <member name="M:WarehouseInventory.Api.Data.StockLevelExtensions.GetOrAddStockLevelAsync(WarehouseInventory.Api.Data.WarehouseDbContext,System.Int32,System.Int32,System.Threading.CancellationToken)">
+            <summary>Loads the tracked stock level for an item at a location, adding a zero-quantity row if none exists.</summary>
+        </member>
+        <member name="M:WarehouseInventory.Api.Data.StockLevelExtensions.GetStockForRemovalAsync(WarehouseInventory.Api.Data.WarehouseDbContext,System.Int32,System.Int32,System.Int32,System.Threading.CancellationToken)">
+            <summary>Loads the stock level and verifies it can supply <paramref name="quantity"/> units.</summary>
+        </member>
+        <member name="M:WarehouseInventory.Api.Data.StockLevelExtensions.RecordMovement(WarehouseInventory.Api.Data.WarehouseDbContext,WarehouseInventory.Api.Domain.MovementType,System.Int32,System.Nullable{System.Int32},System.Nullable{System.Int32},System.Int32,System.String,System.String,System.DateTime)">
+            <summary>Adds an audit record for a stock change; it is persisted with the caller's SaveChanges.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Data.WarehouseDbContext">
+            <summary>EF Core context for the warehouse inventory database.</summary>
+        </member>
+        <member name="M:WarehouseInventory.Api.Data.WarehouseDbContext.#ctor(Microsoft.EntityFrameworkCore.DbContextOptions{WarehouseInventory.Api.Data.WarehouseDbContext})">
+            <summary>Creates the context with the configured provider options.</summary>
+            <param name="options">Context options.</param>
+        </member>
+        <member name="T:WarehouseInventory.Api.Domain.Item">
+            <summary>A stock-keeping unit (SKU) that the warehouse holds.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Domain.Item.LowStockThreshold">
+            <summary>Total on-hand quantity at or below which the item is flagged as low stock. Zero disables alerts.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Domain.Location">
+            <summary>A physical storage location (bin, shelf, dock) in the warehouse.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Domain.StockLevel">
+            <summary>On-hand quantity of one item at one location.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Domain.StockLevel.RowVersion">
+            <summary>Optimistic concurrency token so simultaneous stock changes cannot overwrite each other.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Domain.MovementType">
+            <summary>Kind of stock change recorded in the movement audit trail.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Domain.StockMovement">
+            <summary>Immutable audit record of a stock change.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Domain.OrderStatus">
+            <summary>Fulfillment workflow status: Open → Picking → Picked → Packed → Dispatched.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Domain.FulfillmentOrder">
+            <summary>An outbound order that moves through pick, pack and dispatch.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Domain.OrderLine">
+            <summary>One item and quantity on an order, with how much has been picked so far.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Domain.UserRoles">
+            <summary>Role names stored on users and issued in the JWT role claim.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Domain.AppUser">
+            <summary>A user account; the password is stored only as an ASP.NET Core Identity hash.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Dtos.LoginRequest">
+            <summary>Credentials submitted to the login endpoint.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.LoginRequest.Username">
+            <summary>Account username; surrounding whitespace is ignored.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.LoginRequest.Password">
+            <summary>Plain-text password, verified against the stored hash and never logged.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Dtos.LoginResponse">
+            <summary>Result of a successful credential check. The controller puts the token in an HttpOnly cookie; it is never returned in a response body.</summary>
+            <param name="Token">Signed JWT.</param>
+            <param name="Username">The authenticated user's name.</param>
+            <param name="Role">The user's role (Admin or Staff).</param>
+            <param name="ExpiresAtUtc">When the token expires, in UTC.</param>
+        </member>
+        <member name="M:WarehouseInventory.Api.Dtos.LoginResponse.#ctor(System.String,System.String,System.String,System.DateTime)">
+            <summary>Result of a successful credential check. The controller puts the token in an HttpOnly cookie; it is never returned in a response body.</summary>
+            <param name="Token">Signed JWT.</param>
+            <param name="Username">The authenticated user's name.</param>
+            <param name="Role">The user's role (Admin or Staff).</param>
+            <param name="ExpiresAtUtc">When the token expires, in UTC.</param>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.LoginResponse.Token">
+            <summary>Signed JWT.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.LoginResponse.Username">
+            <summary>The authenticated user's name.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.LoginResponse.Role">
+            <summary>The user's role (Admin or Staff).</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.LoginResponse.ExpiresAtUtc">
+            <summary>When the token expires, in UTC.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Dtos.SessionResponse">
+            <summary>The signed-in user's session, as returned to the browser (no token).</summary>
+            <param name="Username">The authenticated user's name.</param>
+            <param name="Role">The user's role (Admin or Staff).</param>
+            <param name="ExpiresAtUtc">When the session expires, in UTC.</param>
+        </member>
+        <member name="M:WarehouseInventory.Api.Dtos.SessionResponse.#ctor(System.String,System.String,System.DateTime)">
+            <summary>The signed-in user's session, as returned to the browser (no token).</summary>
+            <param name="Username">The authenticated user's name.</param>
+            <param name="Role">The user's role (Admin or Staff).</param>
+            <param name="ExpiresAtUtc">When the session expires, in UTC.</param>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.SessionResponse.Username">
+            <summary>The authenticated user's name.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.SessionResponse.Role">
+            <summary>The user's role (Admin or Staff).</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.SessionResponse.ExpiresAtUtc">
+            <summary>When the session expires, in UTC.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Dtos.ItemRequest">
+            <summary>Item details for create and full update.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.ItemRequest.Sku">
+            <summary>Unique stock-keeping unit code; stored trimmed and upper-cased.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.ItemRequest.Name">
+            <summary>Display name.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.ItemRequest.Description">
+            <summary>Optional free-text description; blank is stored as null.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.ItemRequest.UnitOfMeasure">
+            <summary>Unit the item is counted in (e.g. EA, BOX); stored upper-cased.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.ItemRequest.LowStockThreshold">
+            <summary>Total on-hand quantity at or below which the item is flagged as low stock. Zero disables alerts.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.ItemRequest.IsActive">
+            <summary>Whether the item can be used in new receipts, transfers and orders.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Dtos.ThresholdRequest">
+            <summary>New low-stock threshold for an item.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.ThresholdRequest.LowStockThreshold">
+            <summary>Total on-hand quantity at or below which the item is flagged as low stock. Zero disables alerts.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Dtos.ItemDto">
+            <summary>An item as returned by the API.</summary>
+            <param name="Id">Item id.</param>
+            <param name="Sku">Normalized SKU code.</param>
+            <param name="Name">Display name.</param>
+            <param name="Description">Optional description.</param>
+            <param name="UnitOfMeasure">Unit the item is counted in.</param>
+            <param name="LowStockThreshold">Low-stock threshold; zero means alerts are disabled.</param>
+            <param name="IsActive">Whether the item is active.</param>
+        </member>
+        <member name="M:WarehouseInventory.Api.Dtos.ItemDto.#ctor(System.Int32,System.String,System.String,System.String,System.String,System.Int32,System.Boolean)">
+            <summary>An item as returned by the API.</summary>
+            <param name="Id">Item id.</param>
+            <param name="Sku">Normalized SKU code.</param>
+            <param name="Name">Display name.</param>
+            <param name="Description">Optional description.</param>
+            <param name="UnitOfMeasure">Unit the item is counted in.</param>
+            <param name="LowStockThreshold">Low-stock threshold; zero means alerts are disabled.</param>
+            <param name="IsActive">Whether the item is active.</param>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.ItemDto.Id">
+            <summary>Item id.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.ItemDto.Sku">
+            <summary>Normalized SKU code.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.ItemDto.Name">
+            <summary>Display name.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.ItemDto.Description">
+            <summary>Optional description.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.ItemDto.UnitOfMeasure">
+            <summary>Unit the item is counted in.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.ItemDto.LowStockThreshold">
+            <summary>Low-stock threshold; zero means alerts are disabled.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.ItemDto.IsActive">
+            <summary>Whether the item is active.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Dtos.LocationRequest">
+            <summary>Location details for create and full update.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.LocationRequest.Code">
+            <summary>Unique location code; stored trimmed and upper-cased.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.LocationRequest.Name">
+            <summary>Display name.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.LocationRequest.Description">
+            <summary>Optional free-text description; blank is stored as null.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.LocationRequest.IsActive">
+            <summary>Whether the location is in use. A location holding stock cannot be deactivated.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Dtos.LocationDto">
+            <summary>A storage location as returned by the API.</summary>
+            <param name="Id">Location id.</param>
+            <param name="Code">Normalized location code.</param>
+            <param name="Name">Display name.</param>
+            <param name="Description">Optional description.</param>
+            <param name="IsActive">Whether the location is active.</param>
+        </member>
+        <member name="M:WarehouseInventory.Api.Dtos.LocationDto.#ctor(System.Int32,System.String,System.String,System.String,System.Boolean)">
+            <summary>A storage location as returned by the API.</summary>
+            <param name="Id">Location id.</param>
+            <param name="Code">Normalized location code.</param>
+            <param name="Name">Display name.</param>
+            <param name="Description">Optional description.</param>
+            <param name="IsActive">Whether the location is active.</param>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.LocationDto.Id">
+            <summary>Location id.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.LocationDto.Code">
+            <summary>Normalized location code.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.LocationDto.Name">
+            <summary>Display name.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.LocationDto.Description">
+            <summary>Optional description.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.LocationDto.IsActive">
+            <summary>Whether the location is active.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Dtos.CreateOrderRequest">
+            <summary>A new outbound order.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.CreateOrderRequest.CustomerName">
+            <summary>Customer the order ships to.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.CreateOrderRequest.Lines">
+            <summary>Order lines; at least one, and each item may appear only once.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Dtos.CreateOrderLineRequest">
+            <summary>One line of a new order.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.CreateOrderLineRequest.ItemId">
+            <summary>Id of an active item.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.CreateOrderLineRequest.Quantity">
+            <summary>Units ordered.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Dtos.PickRequest">
+            <summary>Picks units for one order line from a location.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.PickRequest.OrderLineId">
+            <summary>The order line being picked.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.PickRequest.LocationId">
+            <summary>The location the stock is taken from.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.PickRequest.Quantity">
+            <summary>Units to pick; may not exceed the line's remaining quantity or the stock at the location.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Dtos.PackRequest">
+            <summary>Packing details for a fully picked order.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.PackRequest.PackageCount">
+            <summary>Number of packages the order was packed into.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Dtos.DispatchRequest">
+            <summary>Shipping details for a packed order.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.DispatchRequest.Carrier">
+            <summary>Carrier collecting the shipment.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.DispatchRequest.TrackingNumber">
+            <summary>Optional carrier tracking number; blank is stored as null.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Dtos.OrderSummaryDto">
+            <summary>An order as shown in the order list.</summary>
+            <param name="Id">Order id.</param>
+            <param name="OrderNumber">Human-readable order number (ORD-yyyyMMdd-XXXXXX).</param>
+            <param name="CustomerName">Customer the order ships to.</param>
+            <param name="Status">Current workflow status name.</param>
+            <param name="LineCount">Number of order lines.</param>
+            <param name="TotalUnits">Sum of ordered quantities across all lines.</param>
+            <param name="CreatedAtUtc">When the order was created, in UTC.</param>
+        </member>
+        <member name="M:WarehouseInventory.Api.Dtos.OrderSummaryDto.#ctor(System.Int32,System.String,System.String,System.String,System.Int32,System.Int32,System.DateTime)">
+            <summary>An order as shown in the order list.</summary>
+            <param name="Id">Order id.</param>
+            <param name="OrderNumber">Human-readable order number (ORD-yyyyMMdd-XXXXXX).</param>
+            <param name="CustomerName">Customer the order ships to.</param>
+            <param name="Status">Current workflow status name.</param>
+            <param name="LineCount">Number of order lines.</param>
+            <param name="TotalUnits">Sum of ordered quantities across all lines.</param>
+            <param name="CreatedAtUtc">When the order was created, in UTC.</param>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.OrderSummaryDto.Id">
+            <summary>Order id.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.OrderSummaryDto.OrderNumber">
+            <summary>Human-readable order number (ORD-yyyyMMdd-XXXXXX).</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.OrderSummaryDto.CustomerName">
+            <summary>Customer the order ships to.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.OrderSummaryDto.Status">
+            <summary>Current workflow status name.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.OrderSummaryDto.LineCount">
+            <summary>Number of order lines.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.OrderSummaryDto.TotalUnits">
+            <summary>Sum of ordered quantities across all lines.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.OrderSummaryDto.CreatedAtUtc">
+            <summary>When the order was created, in UTC.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Dtos.OrderLineDto">
+            <summary>One line of an order with its pick progress.</summary>
+            <param name="Id">Order line id.</param>
+            <param name="ItemId">Ordered item id.</param>
+            <param name="Sku">Ordered item SKU.</param>
+            <param name="ItemName">Ordered item name.</param>
+            <param name="QuantityOrdered">Units ordered.</param>
+            <param name="QuantityPicked">Units picked so far.</param>
+            <param name="AvailableLocations">Active locations currently holding the item, to pick from.</param>
+        </member>
+        <member name="M:WarehouseInventory.Api.Dtos.OrderLineDto.#ctor(System.Int32,System.Int32,System.String,System.String,System.Int32,System.Int32,System.Collections.Generic.IReadOnlyList{WarehouseInventory.Api.Dtos.LocationStockDto})">
+            <summary>One line of an order with its pick progress.</summary>
+            <param name="Id">Order line id.</param>
+            <param name="ItemId">Ordered item id.</param>
+            <param name="Sku">Ordered item SKU.</param>
+            <param name="ItemName">Ordered item name.</param>
+            <param name="QuantityOrdered">Units ordered.</param>
+            <param name="QuantityPicked">Units picked so far.</param>
+            <param name="AvailableLocations">Active locations currently holding the item, to pick from.</param>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.OrderLineDto.Id">
+            <summary>Order line id.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.OrderLineDto.ItemId">
+            <summary>Ordered item id.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.OrderLineDto.Sku">
+            <summary>Ordered item SKU.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.OrderLineDto.ItemName">
+            <summary>Ordered item name.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.OrderLineDto.QuantityOrdered">
+            <summary>Units ordered.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.OrderLineDto.QuantityPicked">
+            <summary>Units picked so far.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.OrderLineDto.AvailableLocations">
+            <summary>Active locations currently holding the item, to pick from.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Dtos.OrderDetailDto">
+            <summary>Full order detail including lines and fulfillment data.</summary>
+            <param name="Id">Order id.</param>
+            <param name="OrderNumber">Human-readable order number.</param>
+            <param name="CustomerName">Customer the order ships to.</param>
+            <param name="Status">Current workflow status name.</param>
+            <param name="PackageCount">Packages, set when packed.</param>
+            <param name="Carrier">Carrier, set when dispatched.</param>
+            <param name="TrackingNumber">Optional tracking number, set when dispatched.</param>
+            <param name="CreatedBy">Username that created the order.</param>
+            <param name="CreatedAtUtc">When the order was created, in UTC.</param>
+            <param name="PackedAtUtc">When the order was packed, in UTC.</param>
+            <param name="DispatchedAtUtc">When the order was dispatched, in UTC.</param>
+            <param name="Lines">Order lines ordered by id.</param>
+        </member>
+        <member name="M:WarehouseInventory.Api.Dtos.OrderDetailDto.#ctor(System.Int32,System.String,System.String,System.String,System.Nullable{System.Int32},System.String,System.String,System.String,System.DateTime,System.Nullable{System.DateTime},System.Nullable{System.DateTime},System.Collections.Generic.IReadOnlyList{WarehouseInventory.Api.Dtos.OrderLineDto})">
+            <summary>Full order detail including lines and fulfillment data.</summary>
+            <param name="Id">Order id.</param>
+            <param name="OrderNumber">Human-readable order number.</param>
+            <param name="CustomerName">Customer the order ships to.</param>
+            <param name="Status">Current workflow status name.</param>
+            <param name="PackageCount">Packages, set when packed.</param>
+            <param name="Carrier">Carrier, set when dispatched.</param>
+            <param name="TrackingNumber">Optional tracking number, set when dispatched.</param>
+            <param name="CreatedBy">Username that created the order.</param>
+            <param name="CreatedAtUtc">When the order was created, in UTC.</param>
+            <param name="PackedAtUtc">When the order was packed, in UTC.</param>
+            <param name="DispatchedAtUtc">When the order was dispatched, in UTC.</param>
+            <param name="Lines">Order lines ordered by id.</param>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.OrderDetailDto.Id">
+            <summary>Order id.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.OrderDetailDto.OrderNumber">
+            <summary>Human-readable order number.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.OrderDetailDto.CustomerName">
+            <summary>Customer the order ships to.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.OrderDetailDto.Status">
+            <summary>Current workflow status name.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.OrderDetailDto.PackageCount">
+            <summary>Packages, set when packed.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.OrderDetailDto.Carrier">
+            <summary>Carrier, set when dispatched.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.OrderDetailDto.TrackingNumber">
+            <summary>Optional tracking number, set when dispatched.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.OrderDetailDto.CreatedBy">
+            <summary>Username that created the order.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.OrderDetailDto.CreatedAtUtc">
+            <summary>When the order was created, in UTC.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.OrderDetailDto.PackedAtUtc">
+            <summary>When the order was packed, in UTC.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.OrderDetailDto.DispatchedAtUtc">
+            <summary>When the order was dispatched, in UTC.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.OrderDetailDto.Lines">
+            <summary>Order lines ordered by id.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Dtos.ReceiveStockRequest">
+            <summary>Incoming stock to add to a location.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.ReceiveStockRequest.ItemId">
+            <summary>Id of an active item.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.ReceiveStockRequest.LocationId">
+            <summary>Id of the active location receiving the stock.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.ReceiveStockRequest.Quantity">
+            <summary>Units received.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.ReceiveStockRequest.Reference">
+            <summary>Optional supplier reference such as a PO or delivery note number.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Dtos.TransferStockRequest">
+            <summary>Stock to move from one location to another.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.TransferStockRequest.ItemId">
+            <summary>Id of an active item.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.TransferStockRequest.FromLocationId">
+            <summary>Location the stock is taken from; it must hold at least <see cref="P:WarehouseInventory.Api.Dtos.TransferStockRequest.Quantity"/> units.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.TransferStockRequest.ToLocationId">
+            <summary>Active location the stock is moved to; must differ from the source.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.TransferStockRequest.Quantity">
+            <summary>Units to move.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.TransferStockRequest.Reference">
+            <summary>Optional free-text reference for the transfer.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Dtos.StockMovementDto">
+            <summary>An entry in the stock movement audit trail.</summary>
+            <param name="Id">Movement id.</param>
+            <param name="Type">Movement type name (Receipt, Transfer, Pick).</param>
+            <param name="ItemId">Item id.</param>
+            <param name="Sku">Item SKU.</param>
+            <param name="ItemName">Item name.</param>
+            <param name="FromLocationCode">Source location code; null for receipts.</param>
+            <param name="ToLocationCode">Destination location code; null for picks.</param>
+            <param name="Quantity">Units moved.</param>
+            <param name="Reference">Optional reference (supplier document or order number).</param>
+            <param name="PerformedBy">Username that performed the movement.</param>
+            <param name="CreatedAtUtc">When the movement happened, in UTC.</param>
+        </member>
+        <member name="M:WarehouseInventory.Api.Dtos.StockMovementDto.#ctor(System.Int32,System.String,System.Int32,System.String,System.String,System.String,System.String,System.Int32,System.String,System.String,System.DateTime)">
+            <summary>An entry in the stock movement audit trail.</summary>
+            <param name="Id">Movement id.</param>
+            <param name="Type">Movement type name (Receipt, Transfer, Pick).</param>
+            <param name="ItemId">Item id.</param>
+            <param name="Sku">Item SKU.</param>
+            <param name="ItemName">Item name.</param>
+            <param name="FromLocationCode">Source location code; null for receipts.</param>
+            <param name="ToLocationCode">Destination location code; null for picks.</param>
+            <param name="Quantity">Units moved.</param>
+            <param name="Reference">Optional reference (supplier document or order number).</param>
+            <param name="PerformedBy">Username that performed the movement.</param>
+            <param name="CreatedAtUtc">When the movement happened, in UTC.</param>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.StockMovementDto.Id">
+            <summary>Movement id.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.StockMovementDto.Type">
+            <summary>Movement type name (Receipt, Transfer, Pick).</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.StockMovementDto.ItemId">
+            <summary>Item id.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.StockMovementDto.Sku">
+            <summary>Item SKU.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.StockMovementDto.ItemName">
+            <summary>Item name.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.StockMovementDto.FromLocationCode">
+            <summary>Source location code; null for receipts.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.StockMovementDto.ToLocationCode">
+            <summary>Destination location code; null for picks.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.StockMovementDto.Quantity">
+            <summary>Units moved.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.StockMovementDto.Reference">
+            <summary>Optional reference (supplier document or order number).</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.StockMovementDto.PerformedBy">
+            <summary>Username that performed the movement.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.StockMovementDto.CreatedAtUtc">
+            <summary>When the movement happened, in UTC.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Dtos.LocationStockDto">
+            <summary>On-hand quantity of an item at one location.</summary>
+            <param name="LocationId">Location id.</param>
+            <param name="LocationCode">Location code.</param>
+            <param name="LocationName">Location name.</param>
+            <param name="Quantity">Units on hand at the location.</param>
+        </member>
+        <member name="M:WarehouseInventory.Api.Dtos.LocationStockDto.#ctor(System.Int32,System.String,System.String,System.Int32)">
+            <summary>On-hand quantity of an item at one location.</summary>
+            <param name="LocationId">Location id.</param>
+            <param name="LocationCode">Location code.</param>
+            <param name="LocationName">Location name.</param>
+            <param name="Quantity">Units on hand at the location.</param>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.LocationStockDto.LocationId">
+            <summary>Location id.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.LocationStockDto.LocationCode">
+            <summary>Location code.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.LocationStockDto.LocationName">
+            <summary>Location name.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.LocationStockDto.Quantity">
+            <summary>Units on hand at the location.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Dtos.InventoryItemDto">
+            <summary>An item's on-hand stock across all locations.</summary>
+            <param name="ItemId">Item id.</param>
+            <param name="Sku">Item SKU.</param>
+            <param name="Name">Item name.</param>
+            <param name="UnitOfMeasure">Unit the item is counted in.</param>
+            <param name="TotalQuantity">Total units on hand across all locations.</param>
+            <param name="LowStockThreshold">Low-stock threshold; zero means alerts are disabled.</param>
+            <param name="IsLowStock">True when the threshold is above zero and the total is at or below it.</param>
+            <param name="Locations">Locations holding a positive quantity, ordered by code.</param>
+        </member>
+        <member name="M:WarehouseInventory.Api.Dtos.InventoryItemDto.#ctor(System.Int32,System.String,System.String,System.String,System.Int32,System.Int32,System.Boolean,System.Collections.Generic.IReadOnlyList{WarehouseInventory.Api.Dtos.LocationStockDto})">
+            <summary>An item's on-hand stock across all locations.</summary>
+            <param name="ItemId">Item id.</param>
+            <param name="Sku">Item SKU.</param>
+            <param name="Name">Item name.</param>
+            <param name="UnitOfMeasure">Unit the item is counted in.</param>
+            <param name="TotalQuantity">Total units on hand across all locations.</param>
+            <param name="LowStockThreshold">Low-stock threshold; zero means alerts are disabled.</param>
+            <param name="IsLowStock">True when the threshold is above zero and the total is at or below it.</param>
+            <param name="Locations">Locations holding a positive quantity, ordered by code.</param>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.InventoryItemDto.ItemId">
+            <summary>Item id.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.InventoryItemDto.Sku">
+            <summary>Item SKU.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.InventoryItemDto.Name">
+            <summary>Item name.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.InventoryItemDto.UnitOfMeasure">
+            <summary>Unit the item is counted in.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.InventoryItemDto.TotalQuantity">
+            <summary>Total units on hand across all locations.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.InventoryItemDto.LowStockThreshold">
+            <summary>Low-stock threshold; zero means alerts are disabled.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.InventoryItemDto.IsLowStock">
+            <summary>True when the threshold is above zero and the total is at or below it.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.InventoryItemDto.Locations">
+            <summary>Locations holding a positive quantity, ordered by code.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Dtos.StockAlertDto">
+            <summary>A low-stock alert for an active item.</summary>
+            <param name="ItemId">Item id.</param>
+            <param name="Sku">Item SKU.</param>
+            <param name="Name">Item name.</param>
+            <param name="TotalQuantity">Total units on hand across all locations.</param>
+            <param name="LowStockThreshold">The item's low-stock threshold.</param>
+            <param name="Shortfall">Threshold minus total quantity.</param>
+        </member>
+        <member name="M:WarehouseInventory.Api.Dtos.StockAlertDto.#ctor(System.Int32,System.String,System.String,System.Int32,System.Int32,System.Int32)">
+            <summary>A low-stock alert for an active item.</summary>
+            <param name="ItemId">Item id.</param>
+            <param name="Sku">Item SKU.</param>
+            <param name="Name">Item name.</param>
+            <param name="TotalQuantity">Total units on hand across all locations.</param>
+            <param name="LowStockThreshold">The item's low-stock threshold.</param>
+            <param name="Shortfall">Threshold minus total quantity.</param>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.StockAlertDto.ItemId">
+            <summary>Item id.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.StockAlertDto.Sku">
+            <summary>Item SKU.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.StockAlertDto.Name">
+            <summary>Item name.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.StockAlertDto.TotalQuantity">
+            <summary>Total units on hand across all locations.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.StockAlertDto.LowStockThreshold">
+            <summary>The item's low-stock threshold.</summary>
+        </member>
+        <member name="P:WarehouseInventory.Api.Dtos.StockAlertDto.Shortfall">
+            <summary>Threshold minus total quantity.</summary>
+        </member>
+        <member name="T:WarehouseInventory.Api.Services.IAuthService">
+            <summary>Verifies user credentials and issues JWT bearer tokens.</summary>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.IAuthService.LoginAsync(WarehouseInventory.Api.Dtos.LoginRequest,System.Threading.CancellationToken)">
+            <summary>Returns a token for valid credentials, or null when the username or password is wrong.</summary>
+            <param name="request">The submitted username and password.</param>
+            <param name="ct">Cancellation token.</param>
+            <returns>The token and user details, or <c>null</c> for unknown, inactive or wrong-password accounts.</returns>
+        </member>
+        <member name="T:WarehouseInventory.Api.Services.AuthService">
+            <summary>
+            Password-based login against the user table. Unknown users are verified against a dummy hash so timing
+            does not reveal which usernames exist; hashes flagged for upgrade are re-hashed on successful login.
+            </summary>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.AuthService.#ctor(WarehouseInventory.Api.Data.WarehouseDbContext,Microsoft.AspNetCore.Identity.IPasswordHasher{WarehouseInventory.Api.Domain.AppUser},Microsoft.Extensions.Options.IOptions{WarehouseInventory.Api.Configuration.JwtOptions},System.TimeProvider)">
+            <summary>Creates the service.</summary>
+            <param name="db">Database context holding the user table.</param>
+            <param name="hasher">Password hasher used to verify and upgrade hashes.</param>
+            <param name="jwt">JWT issuer, audience, key and lifetime settings.</param>
+            <param name="clock">Time source for token issue and expiry times.</param>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.AuthService.LoginAsync(WarehouseInventory.Api.Dtos.LoginRequest,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.AuthService.CreateToken(WarehouseInventory.Api.Domain.AppUser,System.DateTime)">
+            <summary>Builds and signs a JWT with sub, name and role claims for the user.</summary>
+            <param name="user">The authenticated user.</param>
+            <param name="expiresUtc">Token expiry time in UTC.</param>
+            <returns>The serialized, HMAC-SHA256 signed token.</returns>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.AuthService.CreateSigningKey(System.String)">
+            <summary>Creates the symmetric key used both to sign tokens and to validate them in the JWT bearer handler.</summary>
+            <param name="key">The configured signing key.</param>
+            <returns>A key over the UTF-8 bytes of <paramref name="key"/>.</returns>
+        </member>
+        <member name="T:WarehouseInventory.Api.Services.IInventoryService">
+            <summary>Read-side queries over on-hand stock and low-stock alerts.</summary>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.IInventoryService.SearchAsync(System.String,System.Nullable{System.Int32},System.Boolean,System.Threading.CancellationToken)">
+            <summary>Searches active items with their total and per-location on-hand quantities, ordered by SKU.</summary>
+            <param name="search">Optional text matched against SKU or name.</param>
+            <param name="locationId">Optional location; only items with a positive quantity there are returned.</param>
+            <param name="lowStockOnly">When true, only items at or below their low-stock threshold are returned.</param>
+            <param name="ct">Cancellation token.</param>
+            <returns>Up to <see cref="F:WarehouseInventory.Api.Services.InventoryService.MaxResults"/> matching items.</returns>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.IInventoryService.GetLowStockAlertsAsync(System.Threading.CancellationToken)">
+            <summary>Lists active items whose total stock is at or below a non-zero threshold.</summary>
+            <param name="ct">Cancellation token.</param>
+            <returns>Alerts ordered by largest shortfall, then SKU.</returns>
+        </member>
+        <member name="T:WarehouseInventory.Api.Services.InventoryService">
+            <summary>
+            Read-side queries over on-hand stock. An item is low on stock when its threshold is above zero
+            and its total on-hand quantity across all locations is at or below that threshold.
+            </summary>
+        </member>
+        <member name="F:WarehouseInventory.Api.Services.InventoryService.MaxResults">
+            <summary>Maximum number of rows returned by <see cref="M:WarehouseInventory.Api.Services.InventoryService.SearchAsync(System.String,System.Nullable{System.Int32},System.Boolean,System.Threading.CancellationToken)"/>.</summary>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.InventoryService.#ctor(WarehouseInventory.Api.Data.WarehouseDbContext)">
+            <summary>Creates the service.</summary>
+            <param name="db">Database context.</param>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.InventoryService.SearchAsync(System.String,System.Nullable{System.Int32},System.Boolean,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.InventoryService.GetLowStockAlertsAsync(System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.InventoryService.IsLowStock(System.Int32,System.Int32)">
+            <summary>True when the threshold is above zero and the total quantity is at or below it.</summary>
+            <param name="totalQuantity">Total on-hand quantity across all locations.</param>
+            <param name="threshold">The item's low-stock threshold; zero disables alerts.</param>
+            <returns>Whether the item is low on stock.</returns>
+        </member>
+        <member name="T:WarehouseInventory.Api.Services.IItemService">
+            <summary>Maintains item (SKU) master data.</summary>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.IItemService.GetItemsAsync(System.String,System.Boolean,System.Threading.CancellationToken)">
+            <summary>Lists items ordered by SKU.</summary>
+            <param name="search">Optional text matched against SKU or name.</param>
+            <param name="includeInactive">When true, inactive items are included.</param>
+            <param name="ct">Cancellation token.</param>
+            <returns>The matching items.</returns>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.IItemService.GetItemAsync(System.Int32,System.Threading.CancellationToken)">
+            <summary>Returns a single item.</summary>
+            <param name="id">Item id.</param>
+            <param name="ct">Cancellation token.</param>
+            <returns>The item.</returns>
+            <exception cref="T:WarehouseInventory.Api.Common.NotFoundException">No item has this id.</exception>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.IItemService.CreateItemAsync(WarehouseInventory.Api.Dtos.ItemRequest,System.Threading.CancellationToken)">
+            <summary>Creates an item. The SKU is trimmed and upper-cased before the uniqueness check.</summary>
+            <param name="request">The item details.</param>
+            <param name="ct">Cancellation token.</param>
+            <returns>The created item.</returns>
+            <exception cref="T:WarehouseInventory.Api.Common.ConflictException">Another item already uses the SKU.</exception>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.IItemService.UpdateItemAsync(System.Int32,WarehouseInventory.Api.Dtos.ItemRequest,System.Threading.CancellationToken)">
+            <summary>Replaces all editable fields of an item.</summary>
+            <param name="id">Item id.</param>
+            <param name="request">The new item details.</param>
+            <param name="ct">Cancellation token.</param>
+            <returns>The updated item.</returns>
+            <exception cref="T:WarehouseInventory.Api.Common.NotFoundException">No item has this id.</exception>
+            <exception cref="T:WarehouseInventory.Api.Common.ConflictException">The new SKU is already used by another item.</exception>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.IItemService.UpdateThresholdAsync(System.Int32,WarehouseInventory.Api.Dtos.ThresholdRequest,System.Threading.CancellationToken)">
+            <summary>Changes only the item's low-stock threshold.</summary>
+            <param name="id">Item id.</param>
+            <param name="request">The new threshold.</param>
+            <param name="ct">Cancellation token.</param>
+            <returns>The updated item.</returns>
+            <exception cref="T:WarehouseInventory.Api.Common.NotFoundException">No item has this id.</exception>
+        </member>
+        <member name="T:WarehouseInventory.Api.Services.ItemService">
+            <summary>EF Core implementation of <see cref="T:WarehouseInventory.Api.Services.IItemService"/>.</summary>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.ItemService.#ctor(WarehouseInventory.Api.Data.WarehouseDbContext,System.TimeProvider)">
+            <summary>Creates the service.</summary>
+            <param name="db">Database context.</param>
+            <param name="clock">Time source for audit timestamps.</param>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.ItemService.GetItemsAsync(System.String,System.Boolean,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.ItemService.GetItemAsync(System.Int32,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.ItemService.CreateItemAsync(WarehouseInventory.Api.Dtos.ItemRequest,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.ItemService.UpdateItemAsync(System.Int32,WarehouseInventory.Api.Dtos.ItemRequest,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.ItemService.UpdateThresholdAsync(System.Int32,WarehouseInventory.Api.Dtos.ThresholdRequest,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.ItemService.NormalizeCode(System.String)">
+            <summary>Normalizes an item SKU or location code: trimmed and upper-cased.</summary>
+            <param name="value">The raw code.</param>
+            <returns>The normalized code.</returns>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.ItemService.FindAsync(System.Int32,System.Threading.CancellationToken)">
+            <summary>Loads a tracked item for update.</summary>
+            <exception cref="T:WarehouseInventory.Api.Common.NotFoundException">No item has this id.</exception>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.ItemService.EnsureSkuIsUniqueAsync(System.String,System.Nullable{System.Int32},System.Threading.CancellationToken)">
+            <summary>Ensures no other item uses the SKU.</summary>
+            <param name="sku">Normalized SKU.</param>
+            <param name="excludeId">Item to ignore (the one being updated), or null on create.</param>
+            <param name="ct">Cancellation token.</param>
+            <exception cref="T:WarehouseInventory.Api.Common.ConflictException">Another item already uses the SKU.</exception>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.ItemService.Apply(WarehouseInventory.Api.Domain.Item,WarehouseInventory.Api.Dtos.ItemRequest,System.String,System.DateTime)">
+            <summary>Copies request fields onto the entity, normalizing text, and stamps the modified date.</summary>
+            <param name="item">The entity to update.</param>
+            <param name="request">The submitted details.</param>
+            <param name="sku">The already-normalized SKU.</param>
+            <param name="now">Current UTC time, written to <see cref="P:WarehouseInventory.Api.Domain.Item.UpdatedAtUtc"/>.</param>
+        </member>
+        <member name="T:WarehouseInventory.Api.Services.ILocationService">
+            <summary>Maintains storage location master data.</summary>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.ILocationService.GetLocationsAsync(System.Boolean,System.Threading.CancellationToken)">
+            <summary>Lists locations ordered by code.</summary>
+            <param name="includeInactive">When true, inactive locations are included.</param>
+            <param name="ct">Cancellation token.</param>
+            <returns>The locations.</returns>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.ILocationService.GetLocationAsync(System.Int32,System.Threading.CancellationToken)">
+            <summary>Returns a single location.</summary>
+            <param name="id">Location id.</param>
+            <param name="ct">Cancellation token.</param>
+            <returns>The location.</returns>
+            <exception cref="T:WarehouseInventory.Api.Common.NotFoundException">No location has this id.</exception>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.ILocationService.CreateLocationAsync(WarehouseInventory.Api.Dtos.LocationRequest,System.Threading.CancellationToken)">
+            <summary>Creates a location. The code is trimmed and upper-cased before the uniqueness check.</summary>
+            <param name="request">The location details.</param>
+            <param name="ct">Cancellation token.</param>
+            <returns>The created location.</returns>
+            <exception cref="T:WarehouseInventory.Api.Common.ConflictException">Another location already uses the code.</exception>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.ILocationService.UpdateLocationAsync(System.Int32,WarehouseInventory.Api.Dtos.LocationRequest,System.Threading.CancellationToken)">
+            <summary>Replaces all editable fields of a location.</summary>
+            <param name="id">Location id.</param>
+            <param name="request">The new location details.</param>
+            <param name="ct">Cancellation token.</param>
+            <returns>The updated location.</returns>
+            <exception cref="T:WarehouseInventory.Api.Common.NotFoundException">No location has this id.</exception>
+            <exception cref="T:WarehouseInventory.Api.Common.ConflictException">The new code is already used by another location.</exception>
+            <exception cref="T:WarehouseInventory.Api.Common.BusinessRuleException">Deactivation was requested while the location still holds stock.</exception>
+        </member>
+        <member name="T:WarehouseInventory.Api.Services.LocationService">
+            <summary>EF Core implementation of <see cref="T:WarehouseInventory.Api.Services.ILocationService"/>.</summary>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.LocationService.#ctor(WarehouseInventory.Api.Data.WarehouseDbContext,System.TimeProvider)">
+            <summary>Creates the service.</summary>
+            <param name="db">Database context.</param>
+            <param name="clock">Time source for audit timestamps.</param>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.LocationService.GetLocationsAsync(System.Boolean,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.LocationService.GetLocationAsync(System.Int32,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.LocationService.CreateLocationAsync(WarehouseInventory.Api.Dtos.LocationRequest,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.LocationService.UpdateLocationAsync(System.Int32,WarehouseInventory.Api.Dtos.LocationRequest,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.LocationService.EnsureCodeIsUniqueAsync(System.String,System.Nullable{System.Int32},System.Threading.CancellationToken)">
+            <summary>Ensures no other location uses the code.</summary>
+            <param name="code">Normalized location code.</param>
+            <param name="excludeId">Location to ignore (the one being updated), or null on create.</param>
+            <param name="ct">Cancellation token.</param>
+            <exception cref="T:WarehouseInventory.Api.Common.ConflictException">Another location already uses the code.</exception>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.LocationService.Apply(WarehouseInventory.Api.Domain.Location,WarehouseInventory.Api.Dtos.LocationRequest,System.String,System.DateTime)">
+            <summary>Copies request fields onto the entity, normalizing text, and stamps the modified date.</summary>
+            <param name="location">The entity to update.</param>
+            <param name="request">The submitted details.</param>
+            <param name="code">The already-normalized code.</param>
+            <param name="now">Current UTC time, written to <see cref="P:WarehouseInventory.Api.Domain.Location.UpdatedAtUtc"/>.</param>
+        </member>
+        <member name="T:WarehouseInventory.Api.Services.IOrderService">
+            <summary>Creates outbound orders and moves them through pick, pack and dispatch.</summary>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.IOrderService.GetOrdersAsync(System.Nullable{WarehouseInventory.Api.Domain.OrderStatus},System.Threading.CancellationToken)">
+            <summary>Lists orders, newest first.</summary>
+            <param name="status">Optional status filter.</param>
+            <param name="ct">Cancellation token.</param>
+            <returns>Order summaries with line and unit totals.</returns>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.IOrderService.GetOrderAsync(System.Int32,System.Threading.CancellationToken)">
+            <summary>Returns an order with its lines and the active locations currently holding each line's item.</summary>
+            <param name="id">Order id.</param>
+            <param name="ct">Cancellation token.</param>
+            <returns>The order detail.</returns>
+            <exception cref="T:WarehouseInventory.Api.Common.NotFoundException">No order has this id.</exception>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.IOrderService.CreateOrderAsync(WarehouseInventory.Api.Dtos.CreateOrderRequest,System.String,System.Threading.CancellationToken)">
+            <summary>Creates an order in the Open status with a generated order number.</summary>
+            <param name="request">Customer and order lines.</param>
+            <param name="createdBy">Username recorded as the order's creator.</param>
+            <param name="ct">Cancellation token.</param>
+            <returns>The created order detail.</returns>
+            <exception cref="T:WarehouseInventory.Api.Common.BusinessRuleException">An item appears more than once, or an item does not exist or is inactive.</exception>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.IOrderService.PickAsync(System.Int32,WarehouseInventory.Api.Dtos.PickRequest,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Picks units for one line from a location: removes the stock, records a Pick movement, and sets the order
+            to Picking, or Picked once every line is complete.
+            </summary>
+            <param name="orderId">Order id.</param>
+            <param name="request">Order line, source location and quantity.</param>
+            <param name="performedBy">Username recorded on the stock movement.</param>
+            <param name="ct">Cancellation token.</param>
+            <returns>The updated order detail.</returns>
+            <exception cref="T:WarehouseInventory.Api.Common.NotFoundException">The order, or the line on this order, was not found.</exception>
+            <exception cref="T:WarehouseInventory.Api.Common.BusinessRuleException">
+            The order is not Open or Picking, the quantity exceeds what remains on the line, or the location has insufficient stock.
+            </exception>
+            <exception cref="T:Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException">The stock level was changed concurrently by another request.</exception>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.IOrderService.PackAsync(System.Int32,WarehouseInventory.Api.Dtos.PackRequest,System.Threading.CancellationToken)">
+            <summary>Marks a fully picked order as Packed and records the package count.</summary>
+            <param name="orderId">Order id.</param>
+            <param name="request">Number of packages.</param>
+            <param name="ct">Cancellation token.</param>
+            <returns>The updated order detail.</returns>
+            <exception cref="T:WarehouseInventory.Api.Common.NotFoundException">No order has this id.</exception>
+            <exception cref="T:WarehouseInventory.Api.Common.BusinessRuleException">The order is not in the Picked status.</exception>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.IOrderService.DispatchAsync(System.Int32,WarehouseInventory.Api.Dtos.DispatchRequest,System.Threading.CancellationToken)">
+            <summary>Marks a packed order as Dispatched and records the carrier and tracking number.</summary>
+            <param name="orderId">Order id.</param>
+            <param name="request">Carrier and optional tracking number.</param>
+            <param name="ct">Cancellation token.</param>
+            <returns>The updated order detail.</returns>
+            <exception cref="T:WarehouseInventory.Api.Common.NotFoundException">No order has this id.</exception>
+            <exception cref="T:WarehouseInventory.Api.Common.BusinessRuleException">The order is not in the Packed status.</exception>
+        </member>
+        <member name="T:WarehouseInventory.Api.Services.OrderService">
+            <summary>
+            Outbound workflow: Open → Picking → Picked → Packed → Dispatched.
+            Picking removes stock from a location; packing requires every line fully picked; dispatch requires packing.
+            </summary>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.OrderService.#ctor(WarehouseInventory.Api.Data.WarehouseDbContext,System.TimeProvider)">
+            <summary>Creates the service.</summary>
+            <param name="db">Database context.</param>
+            <param name="clock">Time source for order numbers and workflow timestamps.</param>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.OrderService.GetOrdersAsync(System.Nullable{WarehouseInventory.Api.Domain.OrderStatus},System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.OrderService.GetOrderAsync(System.Int32,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.OrderService.CreateOrderAsync(WarehouseInventory.Api.Dtos.CreateOrderRequest,System.String,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.OrderService.PickAsync(System.Int32,WarehouseInventory.Api.Dtos.PickRequest,System.String,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.OrderService.PackAsync(System.Int32,WarehouseInventory.Api.Dtos.PackRequest,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.OrderService.DispatchAsync(System.Int32,WarehouseInventory.Api.Dtos.DispatchRequest,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.OrderService.LoadForUpdateAsync(System.Int32,System.Threading.CancellationToken)">
+            <summary>Loads a tracked order with its lines for a workflow update.</summary>
+            <param name="orderId">Order id.</param>
+            <param name="ct">Cancellation token.</param>
+            <returns>The tracked order.</returns>
+            <exception cref="T:WarehouseInventory.Api.Common.NotFoundException">No order has this id.</exception>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.OrderService.ToDetailAsync(WarehouseInventory.Api.Domain.FulfillmentOrder,System.Threading.CancellationToken)">
+            <summary>
+            Maps an order to its detail DTO, attaching for each line the active locations that hold its item,
+            loaded in a single query for all of the order's items.
+            </summary>
+            <param name="order">Order with lines and line items loaded.</param>
+            <param name="ct">Cancellation token.</param>
+            <returns>The order detail.</returns>
+        </member>
+        <member name="T:WarehouseInventory.Api.Services.IStockService">
+            <summary>Changes on-hand stock (receipts and transfers) and queries the movement audit trail.</summary>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.IStockService.ReceiveAsync(WarehouseInventory.Api.Dtos.ReceiveStockRequest,System.String,System.Threading.CancellationToken)">
+            <summary>Adds received units to an item's stock at a location and records a Receipt movement.</summary>
+            <param name="request">Item, location, quantity and optional reference.</param>
+            <param name="performedBy">Username recorded on the movement.</param>
+            <param name="ct">Cancellation token.</param>
+            <returns>The recorded movement.</returns>
+            <exception cref="T:WarehouseInventory.Api.Common.NotFoundException">The item or location was not found.</exception>
+            <exception cref="T:WarehouseInventory.Api.Common.BusinessRuleException">The item or location is inactive.</exception>
+            <exception cref="T:Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException">The stock level was changed concurrently by another request.</exception>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.IStockService.TransferAsync(WarehouseInventory.Api.Dtos.TransferStockRequest,System.String,System.Threading.CancellationToken)">
+            <summary>Moves units of an item between two locations and records a Transfer movement.</summary>
+            <param name="request">Item, source and destination locations, quantity and optional reference.</param>
+            <param name="performedBy">Username recorded on the movement.</param>
+            <param name="ct">Cancellation token.</param>
+            <returns>The recorded movement.</returns>
+            <exception cref="T:WarehouseInventory.Api.Common.NotFoundException">The item or destination location was not found.</exception>
+            <exception cref="T:WarehouseInventory.Api.Common.BusinessRuleException">
+            Source equals destination, the item or destination is inactive, or the source has insufficient stock.
+            </exception>
+            <exception cref="T:Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException">A stock level was changed concurrently by another request.</exception>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.IStockService.GetMovementsAsync(System.Nullable{System.Int32},System.Nullable{System.Int32},System.Int32,System.Threading.CancellationToken)">
+            <summary>Lists stock movements, newest first.</summary>
+            <param name="itemId">Optional item filter.</param>
+            <param name="locationId">Optional location filter; matches movements from or to the location.</param>
+            <param name="take">Maximum rows, clamped to 1..<see cref="F:WarehouseInventory.Api.Services.StockService.MaxMovementsPage"/>.</param>
+            <param name="ct">Cancellation token.</param>
+            <returns>The matching movements.</returns>
+        </member>
+        <member name="T:WarehouseInventory.Api.Services.StockService">
+            <summary>
+            EF Core implementation of <see cref="T:WarehouseInventory.Api.Services.IStockService"/>. Each stock change and its audit movement are saved
+            in one SaveChanges call; stock-level row versions guard against concurrent updates.
+            </summary>
+        </member>
+        <member name="F:WarehouseInventory.Api.Services.StockService.MaxMovementsPage">
+            <summary>Upper bound on the number of movements returned by <see cref="M:WarehouseInventory.Api.Services.StockService.GetMovementsAsync(System.Nullable{System.Int32},System.Nullable{System.Int32},System.Int32,System.Threading.CancellationToken)"/>.</summary>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.StockService.#ctor(WarehouseInventory.Api.Data.WarehouseDbContext,System.TimeProvider)">
+            <summary>Creates the service.</summary>
+            <param name="db">Database context.</param>
+            <param name="clock">Time source for movement timestamps.</param>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.StockService.ReceiveAsync(WarehouseInventory.Api.Dtos.ReceiveStockRequest,System.String,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.StockService.TransferAsync(WarehouseInventory.Api.Dtos.TransferStockRequest,System.String,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.StockService.GetMovementsAsync(System.Nullable{System.Int32},System.Nullable{System.Int32},System.Int32,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.StockService.AddMovement(WarehouseInventory.Api.Domain.MovementType,System.Int32,System.Nullable{System.Int32},System.Nullable{System.Int32},System.Int32,System.String,System.String)">
+            <summary>Adds an audit movement stamped with the current time; it is persisted with the caller's SaveChanges.</summary>
+            <param name="type">Movement type.</param>
+            <param name="itemId">Item moved.</param>
+            <param name="fromId">Source location, or null for receipts.</param>
+            <param name="toId">Destination location.</param>
+            <param name="quantity">Units moved.</param>
+            <param name="reference">Optional reference text.</param>
+            <param name="performedBy">Username performing the movement.</param>
+            <returns>The tracked movement entity.</returns>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.StockService.EnsureActiveItemAsync(System.Int32,System.Threading.CancellationToken)">
+            <summary>Verifies the item exists and is active.</summary>
+            <param name="itemId">Item id.</param>
+            <param name="ct">Cancellation token.</param>
+            <exception cref="T:WarehouseInventory.Api.Common.NotFoundException">No item has this id.</exception>
+            <exception cref="T:WarehouseInventory.Api.Common.BusinessRuleException">The item is inactive.</exception>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.StockService.EnsureActiveLocationAsync(System.Int32,System.Threading.CancellationToken)">
+            <summary>Verifies the location exists and is active.</summary>
+            <param name="locationId">Location id.</param>
+            <param name="ct">Cancellation token.</param>
+            <exception cref="T:WarehouseInventory.Api.Common.NotFoundException">No location has this id.</exception>
+            <exception cref="T:WarehouseInventory.Api.Common.BusinessRuleException">The location is inactive.</exception>
+        </member>
+        <member name="M:WarehouseInventory.Api.Services.StockService.Project(System.Linq.IQueryable{WarehouseInventory.Api.Domain.StockMovement})">
+            <summary>Projects movements to DTOs in SQL, joining item and location codes.</summary>
+            <param name="query">The movement query to project.</param>
+            <returns>A composable DTO query.</returns>
+        </member>
+    </members>
+</doc>
